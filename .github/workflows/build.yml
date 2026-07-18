@@ -20,18 +20,30 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    # GitHub Actions по умолчанию имеет установленный NDK, просто даем права на запуск градлу
     - name: Grant execute permissions for gradlew
       run: chmod +x gradlew
 
     - name: Build with Gradle
       run: ./gradlew assembleRelease
 
-    # Собираем все файлы .a из папки сборки и упаковываем их в архив
-    - name: Upload Static Libraries (.a)
+    # Копируем всё важное в отдельную чистую папку перед загрузкой
+    - name: Prepare Artifacts Folder
+      run: |
+        mkdir -p final_output/libs
+        mkdir -p final_output/include
+        
+        # Находим все файлы .a и копируем их с сохранением структуры папок (архитектур)
+        cd bytehook/build
+        find . -name "*.a" -exec cp --parents {} ../../final_output/libs/ \;
+        cd ../..
+        
+        # Забираем заголовочный файл для C++
+        cp bytehook/src/main/cpp/bytehook.h final_output/include/
+
+    # Загружаем готовую собранную папку
+    - name: Upload Static Libraries (.a) and Header (.h)
       uses: actions/upload-artifact@v4
       with:
-        name: bytehook-static-libs
-        path: |
-          bytehook/build/intermediates/cmake/release/obj/**/*.a
-          
+        name: bytehook-complete-sdk
+        path: final_output/
+
