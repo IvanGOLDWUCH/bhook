@@ -1,7 +1,7 @@
 name: Build ByteHook Static Library
 
 on:
-  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой
+  workflow_dispatch: # Кнопка ручного запуска в Actions
 
 jobs:
   build:
@@ -26,24 +26,25 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew assembleRelease
 
-    # Копируем всё важное в отдельную чистую папку перед загрузкой
+    # Автоматический поиск и сборка файлов по всему репозиторию
     - name: Prepare Artifacts Folder
       run: |
         mkdir -p final_output/libs
         mkdir -p final_output/include
         
-        # Находим все файлы .a и копируем их с сохранением структуры папок (архитектур)
-        cd bytehook/build
-        find . -name "*.a" -exec cp --parents {} ../../final_output/libs/ \;
-        cd ../..
+        # Умный поиск всех файлов .a и их копирование
+        find . -name "*.a" -type f -exec cp --parents {} final_output/libs/ \;
         
-        # Забираем заголовочный файл для C++
-        cp bytehook/src/main/cpp/bytehook.h final_output/include/
+        # Умный поиск файла bytehook.h по всему проекту (игнорируя папку финального вывода)
+        find . -name "bytehook.h" -type f ! -path "./final_output/*" -exec cp {} final_output/include/ \;
+        
+        # Проверка, что файлы успешно скопированы
+        ls -R final_output/
 
-    # Загружаем готовую собранную папку
+    # Загрузка архива на GitHub
     - name: Upload Static Libraries (.a) and Header (.h)
       uses: actions/upload-artifact@v4
       with:
         name: bytehook-complete-sdk
         path: final_output/
-
+        
