@@ -1,0 +1,37 @@
+name: Build ByteHook Static Library
+
+on:
+  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    # GitHub Actions по умолчанию имеет установленный NDK, просто даем права на запуск градлу
+    - name: Grant execute permissions for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew assembleRelease
+
+    # Собираем все файлы .a из папки сборки и упаковываем их в архив
+    - name: Upload Static Libraries (.a)
+      uses: actions/upload-artifact@v4
+      with:
+        name: bytehook-static-libs
+        path: |
+          bytehook/build/intermediates/cmake/release/obj/**/*.a
+          
